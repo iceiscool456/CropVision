@@ -1,0 +1,5 @@
+opencv-python>=4.8
+ultralytics>=8.0
+transformers>=4.36
+torch>=2.1
+Pillow>=10.0
