@@ -11,13 +11,29 @@ build/
 venv/
 env/
 
+# ── Secrets & API keys ──────────────────────────────────────────────────────
+.env
+.env.*
+*.key
+*.pem
+*.secret
+*credentials*
+*secrets*
+*token*
+
+# HuggingFace auth
+.huggingface/
+huggingface_token.txt
+
 # Model weights (downloaded at runtime)
 models/*.pt
 models/*.bin
 models/*.safetensors
+models/*.onnx
 
-# HuggingFace cache
+# HuggingFace / torch cache
 .cache/
+hub/
 
 # OS
 .DS_Store
