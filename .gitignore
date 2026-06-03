@@ -14,6 +14,7 @@ env/
 # ── Secrets & API keys ──────────────────────────────────────────────────────
 .env
 .env.*
+!.env.example
 *.key
 *.pem
 *.secret
@@ -30,6 +31,13 @@ models/*.pt
 models/*.bin
 models/*.safetensors
 models/*.onnx
+models/finetuned*/
+
+# Training data (datasets are large; keep them out of git)
+data/
+
+# Saved snapshots from live testing
+captures/
 
 # HuggingFace / torch cache
 .cache/

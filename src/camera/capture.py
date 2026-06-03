@@ -16,6 +16,8 @@ from config.settings import CAMERA_INDEX, FRAME_WIDTH, FRAME_HEIGHT
 
 WARMUP_RETRIES = 30
 WARMUP_DELAY = 0.2  # seconds between retries (~6s total)
+READ_RETRIES = 5    # tolerate transient frame drops mid-stream
+READ_RETRY_DELAY = 0.05
 
 
 class Camera:
@@ -55,13 +57,22 @@ class Camera:
         self._warmup()
 
     def read(self) -> np.ndarray:
-        """Return the next BGR frame, or raise on failure."""
+        """Return the next BGR frame.
+
+        Tolerates transient frame drops (common on macOS) by retrying a few
+        times before giving up, so a single hiccup doesn't crash the app.
+        """
         if self._cap is None:
             raise RuntimeError("Camera not opened. Call open() first.")
-        ok, frame = self._cap.read()
-        if not ok:
-            raise RuntimeError("Failed to read frame from camera.")
-        return frame
+        for _ in range(READ_RETRIES):
+            ok, frame = self._cap.read()
+            if ok and frame is not None:
+                return frame
+            time.sleep(READ_RETRY_DELAY)
+        raise RuntimeError(
+            f"Failed to read frame from camera after {READ_RETRIES} retries. "
+            "The camera may have been disconnected or claimed by another app."
+        )
 
     def release(self) -> None:
         if self._cap is not None:
