@@ -3,11 +3,31 @@ Central configuration for CropVision.
 All tunables live here so nothing is hardcoded in module code.
 """
 
+import os
 from pathlib import Path
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODEL_CACHE_DIR = PROJECT_ROOT / "models"
+
+
+def _load_dotenv(path: Path) -> None:
+    """Minimal .env loader (avoids a python-dotenv dependency).
+
+    Reads simple KEY=VALUE lines into os.environ without overriding values
+    that are already set in the real environment.
+    """
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+_load_dotenv(PROJECT_ROOT / ".env")
 
 # ── Camera ───────────────────────────────────────────────────────────────────
 CAMERA_INDEX = 0            # 0 = default webcam; change for external cameras
@@ -21,22 +41,47 @@ YOLO_CONFIDENCE = 0.25          # lowered to catch more plants at the edge
 #   58 = potted plant, 75 = vase (often holds flowers/plants)
 PLANT_CLASS_IDS = {58, 75}
 
-# ── Classification (HuggingFace ViT) ────────────────────────────────────────
-# Plant-specific model: 10,000+ species, ViT fine-tuned on real garden photography.
-CLASSIFIER_MODEL = "Sisigoks/FloraSense"
-CLASSIFIER_TOP_K = 5           # how many top predictions to keep
-CLASSIFIER_CONFIDENCE = 0.001  # 10K+ classes spread probability thin; show top hits
+# ── Species identification (Pl@ntNet API) ───────────────────────────────────
+# Remote, in-the-wild plant ID (78k+ species).  Zero local disk; needs internet
+# and a free API key (500 identifications/day).  Set PLANTNET_API_KEY in .env.
+PLANTNET_API_KEY = os.environ.get("PLANTNET_API_KEY", "")
+PLANTNET_ENDPOINT = "https://my-api.plantnet.org/v2/identify/all"
+PLANTNET_TOP_K = 3
+PLANTNET_TIMEOUT = 15          # seconds for the HTTP request
 
-# When YOLO finds no plant bbox, classify the full frame as a fallback.
+# ── Health / disease analysis ───────────────────────────────────────────────
+# MobileNetV2 trained on PlantVillage: 38 classes over 14 crops (incl. fruit/veg),
+# each with healthy + diseased states.  Small + fast, ideal for real-time use.
+# Labels are human-readable, e.g. "Tomato with Late Blight", "Healthy Tomato Plant".
+HEALTH_MODEL = "linkanjarad/mobilenet_v2_1.0_224-plant-disease-identification"
+HEALTH_TOP_K = 3
+# Minimum score for us to TRUST the crop/health model's crop label.  Above this
+# the plant is confidently one of the 14 crops and we surface its health status.
+HEALTH_CONFIDENCE = 0.50
+
+# ── Leaf mode (close-up single-leaf disease check) ──────────────────────────
+# Toggle with 'l' in live mode.  Draws a centered target box and runs the
+# disease model on ONLY that region, so background clutter doesn't dilute it.
+# The box side = this fraction of the frame's shorter dimension.
+LEAF_MODE_ROI_FRAC = 0.5
+
+# When YOLO finds no plant bbox, analyze the full frame as a fallback.
 CLASSIFY_FULL_FRAME_FALLBACK = True
 
 # ── Visualization ───────────────────────────────────────────────────────────
-BOX_COLOR = (0, 255, 100)      # BGR — bright green
+BOX_COLOR = (0, 255, 100)      # BGR — default box color
 BOX_THICKNESS = 2
 LABEL_FONT_SCALE = 0.6
 LABEL_COLOR = (255, 255, 255)  # white text
 LABEL_BG_COLOR = (0, 0, 0)    # black background behind text
 
+# Box color per health status (BGR).
+STATUS_COLORS = {
+    "HEALTHY": (0, 200, 0),     # green
+    "DISEASED": (0, 0, 255),    # red
+    "UNKNOWN": (160, 160, 160),  # gray
+}
+
 # ── Pipeline ────────────────────────────────────────────────────────────────
-# Run the species classifier every N frames to avoid GPU/CPU saturation.
+# Run the local health model every N frames to avoid CPU/GPU saturation.
 CLASSIFY_EVERY_N_FRAMES = 5
