@@ -62,20 +62,6 @@ def draw_species_banner(
     return frame
 
 
-def draw_leaf_roi(
-    frame: np.ndarray,
-    box: tuple,
-    report: HealthReport,
-) -> np.ndarray:
-    """Draw the centered leaf-mode target box, a hint, and the health result."""
-    x1, y1, x2, y2 = box
-    color = STATUS_COLORS.get(report.status, BOX_COLOR)
-    cv2.rectangle(frame, (x1, y1), (x2, y2), color, BOX_THICKNESS)
-    _draw_label(frame, "LEAF MODE - fill box with ONE leaf  ('l' to exit)", x1, y1 - 8, color)
-    _draw_label(frame, report.text(), x1, y2 + 22, color)
-    return frame
-
-
 def draw_fps(frame: np.ndarray, fps: float) -> np.ndarray:
     _draw_label(frame, f"FPS: {fps:.1f}", 10, 30, BOX_COLOR)
     return frame

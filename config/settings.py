@@ -1,5 +1,5 @@
 """
-Central configuration for CropVision.
+Central configuration for LeafLens.
 All tunables live here so nothing is hardcoded in module code.
 """
 
@@ -49,6 +49,17 @@ PLANTNET_ENDPOINT = "https://my-api.plantnet.org/v2/identify/all"
 PLANTNET_TOP_K = 3
 PLANTNET_TIMEOUT = 15          # seconds for the HTTP request
 
+# ── Accurate disease ID (Plant.id / Kindwise plant.health API) ──────────────
+# Optional upgrade for in-the-wild disease diagnosis (molds, mildews, rusts,
+# pests) with treatment info. Expert-annotated, far better than the local model
+# for arbitrary plants. Needs a key (100 free credits, then paid). Set
+# PLANTID_API_KEY in .env. If absent, the "Deep diagnosis" feature is disabled.
+PLANTID_API_KEY = os.environ.get("PLANTID_API_KEY", "")
+PLANTID_ENDPOINT = "https://plant.id/api/v3/health_assessment"
+PLANTID_USAGE_ENDPOINT = "https://plant.id/api/v3/usage_info"  # free, no credit cost
+PLANTID_TOP_K = 4              # number of disease suggestions to surface
+PLANTID_TIMEOUT = 20          # seconds for the HTTP request
+
 # ── Health / disease analysis ───────────────────────────────────────────────
 # MobileNetV2 trained on PlantVillage: 38 classes over 14 crops (incl. fruit/veg),
 # each with healthy + diseased states.  Small + fast, ideal for real-time use.
@@ -58,12 +69,6 @@ HEALTH_TOP_K = 3
 # Minimum score for us to TRUST the crop/health model's crop label.  Above this
 # the plant is confidently one of the 14 crops and we surface its health status.
 HEALTH_CONFIDENCE = 0.50
-
-# ── Leaf mode (close-up single-leaf disease check) ──────────────────────────
-# Toggle with 'l' in live mode.  Draws a centered target box and runs the
-# disease model on ONLY that region, so background clutter doesn't dilute it.
-# The box side = this fraction of the frame's shorter dimension.
-LEAF_MODE_ROI_FRAC = 0.5
 
 # When YOLO finds no plant bbox, analyze the full frame as a fallback.
 CLASSIFY_FULL_FRAME_FALLBACK = True

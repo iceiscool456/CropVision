@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeafLens — Plant ID &amp; Disease Diagnosis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__inner">
+      <div class="brand">
+        <span class="brand__mark" aria-hidden="true">🌿</span>
+        <span class="brand__name">LeafLens</span>
+      </div>
+      <h1 class="hero__title">Know your plant. Spot the disease.</h1>
+      <p class="hero__subtitle">
+        Upload a photo or use your camera to identify a plant species and run an
+        accurate disease diagnosis — in seconds.
+      </p>
+      <span id="apiStatus" class="badge badge--muted">Connecting…</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- How to use -->
+    <section class="guide" aria-labelledby="guideHeading">
+      <h2 id="guideHeading" class="section-title">How to use</h2>
+      <ol class="steps">
+        <li class="step">
+          <div class="step__num">1</div>
+          <div>
+            <h3>Choose a mode</h3>
+            <p>Upload a photo, or start your live camera below.</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step__num">2</div>
+          <div>
+            <h3>Identify the species</h3>
+            <p>Press <strong>Identify species</strong> to query Pl@ntNet for the
+              plant's name.</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step__num">3</div>
+          <div>
+            <h3>Diagnose disease</h3>
+            <p>Press <strong>Deep diagnosis</strong> for an accurate, specific
+              disease/pest read with treatment guidance.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Tabs -->
+    <div class="tabs" role="tablist">
+      <button class="tab is-active" data-tab="upload" role="tab">📷 Upload photo</button>
+      <button class="tab" data-tab="live" role="tab">🎥 Live camera</button>
+    </div>
+
+    <!-- Upload panel -->
+    <section id="panel-upload" class="panel is-active">
+      <div class="workspace">
+        <div class="stage">
+          <div id="dropzone" class="dropzone">
+            <input id="fileInput" type="file" accept="image/*" hidden />
+            <div class="dropzone__hint">
+              <span class="dropzone__icon">⬆️</span>
+              <p><strong>Drop an image</strong> or click to browse</p>
+              <p class="muted">JPEG or PNG, up to 12&nbsp;MB</p>
+            </div>
+            <div class="canvas-wrap" hidden>
+              <img id="uploadImg" alt="Uploaded plant" />
+              <canvas id="uploadCanvas"></canvas>
+            </div>
+          </div>
+          <div class="controls">
+            <button id="uploadAnalyze" class="btn btn--primary" disabled>Analyze</button>
+            <button id="uploadReset" class="btn" disabled>Clear</button>
+          </div>
+          <button id="uploadDeep" class="btn btn--deep" disabled hidden>
+            <span class="btn__icon">🔬</span> Deep diagnosis (accurate)
+          </button>
+          <small class="credit-badge" hidden></small>
+        </div>
+        <aside class="results" id="uploadResults">
+          <p class="muted">Results will appear here.</p>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Live panel -->
+    <section id="panel-live" class="panel">
+      <div class="workspace">
+        <div class="stage">
+          <div class="canvas-wrap canvas-wrap--video">
+            <video id="video" playsinline muted></video>
+            <div id="livePlaceholder" class="video-placeholder">
+              <p>Camera is off</p>
+            </div>
+          </div>
+          <div class="controls">
+            <button id="camToggle" class="btn btn--primary">Start camera</button>
+          </div>
+          <button id="liveIdentify" class="btn btn--identify" disabled>
+            <span class="btn__icon">🔍</span> Identify species
+          </button>
+          <button id="liveDeep" class="btn btn--deep" disabled hidden>
+            <span class="btn__icon">🔬</span> Deep diagnosis (accurate)
+          </button>
+          <small class="credit-badge" hidden></small>
+        </div>
+        <aside class="results" id="liveResults">
+          <p class="muted">Start the camera to begin.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="crops">
+      <h2 class="section-title">Crops the disease model knows</h2>
+      <div id="cropChips" class="chips"></div>
+      <p class="muted">
+        Disease detection is limited to these 14 crops (leaf-level). Species
+        identification works for tens of thousands of plants via Pl@ntNet.
+      </p>
+
+      <h2 class="section-title" style="margin-top:24px">Conditions it can detect</h2>
+      <div class="chips">
+        <span class="chip">Powdery mildew</span>
+        <span class="chip">Leaf mold</span>
+        <span class="chip">Rust</span>
+        <span class="chip">Scab</span>
+        <span class="chip">Early &amp; late blight</span>
+        <span class="chip">Black rot / Esca</span>
+        <span class="chip">Leaf spots (Septoria, Target, Gray)</span>
+        <span class="chip">Leaf scorch</span>
+        <span class="chip">Bacterial spot</span>
+        <span class="chip">Mosaic / Leaf-curl virus</span>
+        <span class="chip">Citrus greening</span>
+        <span class="chip">Spider mites</span>
+      </div>
+      <p class="muted">
+        The free local model gives a quick healthy/diseased read on these crops;
+        <strong>Deep diagnosis</strong> (Plant.id) provides accurate, specific
+        disease names with treatment for essentially any plant.
+      </p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>LeafLens · YOLOv8 + PlantVillage MobileNetV2 + Pl@ntNet · Demo build</p>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
