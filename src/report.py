@@ -29,17 +29,15 @@ class HealthReport:
     score: float
 
     def text(self) -> str:
+        """Quick local health label (crop + best-guess disease)."""
         if self.status == UNKNOWN:
-            # In leaf mode we keep a low-confidence guess around for feedback.
-            if self.crop and self.score > 0:
-                cond = self.condition or "unclear"
-                return f"Unsure: {self.crop} - {cond} ({self.score:.0%})"
             return "Health: unknown"
         pct = f" {self.score:.0%}" if self.score else ""
         prefix = f"{self.crop}: " if self.crop else ""
         if self.status == HEALTHY:
             return f"{prefix}Healthy{pct}"
-        return f"{prefix}Diseased ({self.condition}){pct}"
+        # "likely" signals the specific disease name is a best guess.
+        return f"{prefix}Diseased (likely {self.condition}){pct}"
 
 
 @dataclass
@@ -53,3 +51,25 @@ class SpeciesGuess:
     def text(self) -> str:
         name = self.common_name or self.scientific_name
         return f"{name} {self.score:.0%}"
+
+
+@dataclass
+class DiseaseSuggestion:
+    """One disease/pest candidate from the Plant.id health API."""
+
+    name: str
+    probability: float
+    description: str
+    treatment: str  # flattened, human-readable treatment guidance
+
+    def text(self) -> str:
+        return f"{self.name} {self.probability:.0%}"
+
+
+@dataclass
+class DeepHealth:
+    """Accurate (remote) health assessment from Plant.id."""
+
+    is_healthy: bool
+    is_healthy_probability: float
+    suggestions: list  # List[DiseaseSuggestion]

@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """
-CropVision — real-time plant species identification.
+LeafLens — real-time plant species identification & disease diagnosis (CLI).
 
-Usage:
+For the web app (photo upload + live camera in the browser), run instead:
+    python -m web.app      →  http://127.0.0.1:8000
+
+Usage (desktop window):
     python main.py              # live webcam
     python main.py --image plant.jpg   # single image (no camera needed)
 
@@ -19,7 +22,7 @@ from src.pipeline.engine import PipelineEngine
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="CropVision plant identifier")
+    parser = argparse.ArgumentParser(description="LeafLens plant identifier")
     parser.add_argument(
         "--image",
         type=str,

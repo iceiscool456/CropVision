@@ -27,7 +27,6 @@ from config.settings import (
     CLASSIFY_EVERY_N_FRAMES,
     CLASSIFY_FULL_FRAME_FALLBACK,
     HEALTH_CONFIDENCE,
-    LEAF_MODE_ROI_FRAC,
 )
 from src.camera.capture import Camera
 from src.classification.plantnet import PlantNetClient
@@ -38,7 +37,6 @@ from src.visualization.overlay import (
     draw_fps,
     draw_health,
     draw_health_fullframe,
-    draw_leaf_roi,
     draw_species_banner,
 )
 
@@ -47,13 +45,13 @@ class PipelineEngine:
     """Real-time detect → diagnose loop with on-demand species ID."""
 
     def __init__(self) -> None:
-        print("[CropVision] Loading detection model …")
+        print("[LeafLens] Loading detection model …")
         self._detector = PlantDetector()
-        print("[CropVision] Loading health/disease model …")
+        print("[LeafLens] Loading health/disease model …")
         self._health = HealthAnalyzer()
-        print("[CropVision] Connecting Pl@ntNet species API …")
+        print("[LeafLens] Connecting Pl@ntNet species API …")
         self._plantnet = PlantNetClient()
-        print("[CropVision] Ready.")
+        print("[LeafLens] Ready.")
 
     def run(self, image_path: Optional[str] = None) -> None:
         if image_path:
@@ -69,7 +67,7 @@ class PipelineEngine:
         if frame is None:
             raise ValueError(f"Could not decode image: {path}")
 
-        print(f"[CropVision] Processing image: {path}")
+        print(f"[LeafLens] Processing image: {path}")
         detections = self._detector.detect(frame)
 
         if detections:
@@ -83,14 +81,14 @@ class PipelineEngine:
             print(f"  • health: {report.text()}")
 
         # Species ID runs automatically for a single image.
-        print("[CropVision] Identifying species via Pl@ntNet …")
+        print("[LeafLens] Identifying species via Pl@ntNet …")
         guesses = self._plantnet.identify(frame)
         draw_species_banner(frame, guesses)
         for g in guesses:
             print(f"  • species: {g.text()}  ({g.scientific_name})")
 
-        print("[CropVision] Press any key to close.")
-        cv2.imshow("CropVision", frame)
+        print("[LeafLens] Press any key to close.")
+        cv2.imshow("LeafLens", frame)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
@@ -99,77 +97,60 @@ class PipelineEngine:
         frame_count = 0
         cached_reports: List[HealthReport] = []
         cached_full: Optional[HealthReport] = None
-        cached_leaf = HealthReport(UNKNOWN, "", "", 0.0)
         species: List[SpeciesGuess] = []
-        leaf_mode = False
         prev_time = time.perf_counter()
 
-        print("[CropVision] Starting camera …")
+        print("[LeafLens] Starting camera …")
         with Camera() as cam:
-            print(
-                "[CropVision] Running.  'i' species · 'l' leaf-mode (disease) · "
-                "'s' snapshot · 'q' quit."
-            )
+            print("[LeafLens] Running.  'i' species · 's' snapshot · 'q' quit.")
             while True:
                 frame = cam.read()
                 frame_count += 1
                 analyze = (frame_count - 1) % CLASSIFY_EVERY_N_FRAMES == 0
 
-                if leaf_mode:
-                    box = self._center_roi(frame)
-                    if analyze:
-                        x1, y1, x2, y2 = box
-                        cached_leaf = self._leaf_report(frame[y1:y2, x1:x2])
-                    detections: List[Detection] = []
-                else:
-                    detections = self._detector.detect(frame)
-                    if analyze:
-                        if detections:
-                            cached_reports = [
-                                self._health_for(frame[d.y1:d.y2, d.x1:d.x2])
-                                for d in detections
-                            ]
-                            cached_full = None
-                        elif CLASSIFY_FULL_FRAME_FALLBACK:
-                            cached_reports = []
-                            cached_full = self._health_for(frame)
-                        else:
-                            cached_reports = []
-                            cached_full = None
+                detections: List[Detection] = self._detector.detect(frame)
+                if analyze:
+                    if detections:
+                        cached_reports = [
+                            self._health_for(frame[d.y1:d.y2, d.x1:d.x2])
+                            for d in detections
+                        ]
+                        cached_full = None
+                    elif CLASSIFY_FULL_FRAME_FALLBACK:
+                        cached_reports = []
+                        cached_full = self._health_for(frame)
+                    else:
+                        cached_reports = []
+                        cached_full = None
 
                 now = time.perf_counter()
                 fps = 1.0 / max(now - prev_time, 1e-9)
                 prev_time = now
 
-                if leaf_mode:
-                    draw_leaf_roi(frame, self._center_roi(frame), cached_leaf)
-                elif detections:
+                if detections:
                     draw_health(frame, detections, cached_reports)
                 elif cached_full is not None:
                     draw_health_fullframe(frame, cached_full)
                 draw_species_banner(frame, species)
                 draw_fps(frame, fps)
 
-                cv2.imshow("CropVision", frame)
+                cv2.imshow("LeafLens", frame)
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord("q"):
                     break
                 if key == ord("s"):
                     self._save_snapshot(frame)
-                if key == ord("l"):
-                    leaf_mode = not leaf_mode
-                    print(f"[CropVision] Leaf mode {'ON' if leaf_mode else 'OFF'}.")
                 if key == ord("i"):
                     draw_species_banner(frame, [], identifying=True)
-                    cv2.imshow("CropVision", frame)
+                    cv2.imshow("LeafLens", frame)
                     cv2.waitKey(1)
-                    print("[CropVision] Identifying species via Pl@ntNet …")
+                    print("[LeafLens] Identifying species via Pl@ntNet …")
                     species = self._plantnet.identify(frame)
                     for g in species:
                         print(f"  • {g.text()}  ({g.scientific_name})")
 
         cv2.destroyAllWindows()
-        print("[CropVision] Shut down cleanly.")
+        print("[LeafLens] Shut down cleanly.")
 
     # ── helpers ──────────────────────────────────────────────────────────────
     def _health_for(self, region: np.ndarray) -> HealthReport:
@@ -187,32 +168,10 @@ class PipelineEngine:
             )
         return HealthReport(UNKNOWN, "", "", 0.0)
 
-    def _leaf_report(self, region: np.ndarray) -> HealthReport:
-        """Like _health_for, but keeps the top low-confidence guess for feedback."""
-        if region.size == 0:
-            return HealthReport(UNKNOWN, "", "", 0.0)
-        results = self._health.analyze(region)
-        top = results[0] if results else None
-        if top is None:
-            return HealthReport(UNKNOWN, "", "", 0.0)
-        if top.score >= HEALTH_CONFIDENCE:
-            return HealthReport(top.status, top.crop, top.condition, top.score)
-        # Below the gate: show the tentative guess (status stays UNKNOWN → gray).
-        return HealthReport(UNKNOWN, top.crop, top.condition, top.score)
-
-    @staticmethod
-    def _center_roi(frame: np.ndarray) -> tuple:
-        """Centered square ROI box (x1, y1, x2, y2) for leaf mode."""
-        h, w = frame.shape[:2]
-        side = int(min(h, w) * LEAF_MODE_ROI_FRAC)
-        cx, cy = w // 2, h // 2
-        half = side // 2
-        return (cx - half, cy - half, cx + half, cy + half)
-
     @staticmethod
     def _save_snapshot(frame: np.ndarray) -> None:
         captures = Path("captures")
         captures.mkdir(exist_ok=True)
         out = captures / f"snapshot_{datetime.now():%Y%m%d_%H%M%S}.jpg"
         cv2.imwrite(str(out), frame)
-        print(f"[CropVision] Saved snapshot → {out}")
+        print(f"[LeafLens] Saved snapshot → {out}")
